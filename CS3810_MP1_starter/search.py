@@ -61,9 +61,31 @@ def dfs_search(problem):
     order if you want the stack to explore them in ACTION_ORDER order.
     """
     
-    (s_r,s_c), dirty = problem.initial_state()
-    
-    raise NotImplementedError("Part 2a: implement dfs_search")
+    start = problem.initial_state()
+    stack = [(start, [])]         
+    explored = set()
+    nodes_expanded = 0
+    max_frontier = 0              
+
+    while stack:
+        max_frontier = max(max_frontier, len(stack))
+        state, path = stack.pop()
+
+        if problem.is_goal(state):
+            return (path, nodes_expanded, max_frontier)
+
+        if state in explored:
+            continue
+        explored.add(state)
+        nodes_expanded += 1
+
+        for action in reversed(problem.get_actions(state)):   
+            child = problem.result(state, action)
+            if child not in explored:
+                stack.append((child, path + [action]))
+
+    return (None, nodes_expanded, max_frontier)
+    #raise NotImplementedError("Part 2a: implement dfs_search")
 
 
 def astar_search(problem, heuristic):
@@ -90,7 +112,8 @@ def astar_search(problem, heuristic):
     came_from[state] = (parent_state, action) to rebuild the path at the
     end. A helper like _reconstruct() below keeps the main loop readable.
     """
-    raise NotImplementedError("Part 2b: implement astar_search")
+    
+    #raise NotImplementedError("Part 2b: implement astar_search")
 
 
 def _reconstruct(came_from, state):
