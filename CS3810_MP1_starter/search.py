@@ -112,7 +112,50 @@ def astar_search(problem, heuristic):
     came_from[state] = (parent_state, action) to rebuild the path at the
     end. A helper like _reconstruct() below keeps the main loop readable.
     """
-    
+    start = problem.initial_state()
+    pq = PriorityQueue()
+    h_start = heuristic(start, problem)
+    pq.push(start, h_start)  
+
+    best_g = {start: 0}
+    came_from = {start: (None, None)} 
+    explored = set()
+    nodes_expanded = 0
+    max_frontier = 1
+
+    while pq:
+        max_frontier = max(max_frontier, len(pq))
+        state = pq.pop()
+
+        if problem.is_goal(state):
+            # reconstruct path
+            path = []
+            cur = state
+            while came_from[cur][0] is not None:
+                parent, action = came_from[cur]
+                path.append(action)
+                cur = parent
+            path.reverse()
+            return (path, nodes_expanded, max_frontier)
+
+        explored.add(state)
+        nodes_expanded += 1
+
+        for action in problem.get_actions(state):
+            child = problem.result(state, action)
+            new_g = best_g[state] + problem.action_cost(state, action)
+
+            if child in explored:
+                # with consistent heuristic, skip
+                continue
+
+            if child not in best_g or new_g < best_g[child]:
+                best_g[child] = new_g
+                came_from[child] = (state, action)
+                h = heuristic(child, problem)
+                pq.push(child, new_g + h)
+
+    return (None, nodes_expanded, max_frontier)
     #raise NotImplementedError("Part 2b: implement astar_search")
 
 
@@ -126,7 +169,18 @@ def _reconstruct(came_from, state):
     Returns:
         List of actions from the initial state to `state`.
     """
-    raise NotImplementedError("Part 2b: implement _reconstruct (optional helper)")
+    path = []
+    
+    while state in came_from:
+        parent, action = came_from[state]
+        if parent is None:
+            break
+        path.append(action)
+        state = parent
+
+    path.reverse()
+    return path
+    #raise NotImplementedError("Part 2b: implement _reconstruct (optional helper)")
 
 
 def idastar_search(problem, heuristic):
@@ -162,7 +216,55 @@ def idastar_search(problem, heuristic):
     where search(state, g, threshold) returns FOUND, or the smallest
     f-value it saw that exceeded the threshold, or math.inf.
     """
-    raise NotImplementedError("Part 2c: implement idastar_search")
+    start = problem.initial_state()
+
+    # Wrapped in a list so the nested search() can mutate it without nonlocal.
+    stats = {'nodes': 0}
+    iterations = 0
+
+    def search(state, g, threshold, path_states):
+        """Bounded DFS. Returns (True, path) or (False, next_threshold)."""
+        f = g + heuristic(state, problem)
+        if f > threshold:
+            return (False, f)
+
+        if problem.is_goal(state):
+            return (True, [])
+
+        stats['nodes'] += 1
+        min_exceeded = float('inf')
+
+        for action in problem.get_actions(state):
+            child = problem.result(state, action)
+            if child in path_states:
+                continue
+
+            path_states.add(child)
+            new_g = g + problem.action_cost(state, action)
+            found, val = search(child, new_g, threshold, path_states)
+            path_states.remove(child)
+
+            if found:
+                return (True, [action] + val)
+            if val < min_exceeded:
+                min_exceeded = val
+
+        return (False, min_exceeded)
+
+    threshold = heuristic(start, problem)
+
+    while True:
+        iterations += 1
+        path_states = {start}
+        found, val = search(start, 0, threshold, path_states)
+
+        if found:
+            return (val, stats['nodes'], iterations)
+        if val == float('inf'):
+            return (None, stats['nodes'], iterations)
+        threshold = val
+
+    #raise NotImplementedError("Part 2c: implement idastar_search")
 
 
 if __name__ == "__main__":
